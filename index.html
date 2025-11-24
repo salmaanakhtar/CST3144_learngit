@@ -2,136 +2,253 @@
   <head>
     <title>Vue.js Pet Depot</title>
     <script src="https://unpkg.com/vue@2.7.8/dist/vue.js"></script>
+    <script src="products.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="petstore.webmanifest">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+          .then(function(registration) {
+            console.log('Service Worker registered successfully:', registration);
+          })
+          .catch(function(error) {
+            console.log('Service Worker registration failed:', error);
+          });
+      }
+    </script>
   </head>
   <body>
     <div id="app">
       <header>
         <h1 v-text="sitename"></h1>
+        <button v-on:click="showCheckout" v-if="cartItemCount > 0">
+          <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+          Checkout ({{ cartItemCount }})
+        </button>
+        <div class="cart-info" v-else>
+          <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+          Cart ({{ cartItemCount }})
+        </div>
       </header>
       <main>
-        <figure>
-          <!-- bind 'src' attr to 'product.image' in 'data' -->
-          <img v-bind:src="product.image" />
-        </figure>
-        <h2 v-text="product.title"></h2>
-        <p v-html="product.description"></p>
-        <!-- The double curly brackets is used instead of 'v-text' -->
-        <p>Price: {{product.price}}</p>
-        <button v-on:click="addToCart">
-          Add to cart
-        </button>
-        <button v-on:click="showCheckoutForm">
-          Checkout
-        </button>
-        
+        <!-- Products Section -->
+        <section class="products" v-if="showProduct">
+          <h2>Our Products</h2>
+          <article v-for="prod in products" :key="prod.id" class="product">
+            <div class="rating">
+              <span v-for="n in prod.rating">★</span>
+              <span v-for="n in 5 - prod.rating">☆</span>
+            </div>
+            <figure>
+              <img v-bind:src="prod.image" alt="{{prod.title}}" />
+            </figure>
+            <h3>{{ prod.title }}</h3>
+            <p v-html="prod.description"></p>
+            <p>Price: ${{ (prod.price / 100).toFixed(2) }}</p>
+            <p v-if="getRemainingInventory(prod.id) > 0">Available stock: {{ getRemainingInventory(prod.id) }}</p>
+            <p v-else style="color: red; font-weight: bold">Sold out</p>
+            <button v-on:click="addToCart(prod.id)" :disabled="!canAddProduct(prod.id)">Add to cart</button>
+          </article>
+        </section>
+
+        <!-- Checkout Section -->
+        <section class="checkout" v-if="!showProduct">
+          <h2>Checkout</h2>
+          <p>
+            <strong>First Name:</strong>
+            <input v-model.trim="order.firstName" />
+          </p>
+          <p>
+            <strong>Last Name:</strong>
+            <input v-model.trim="order.lastName" />
+          </p>
+          <p><strong>Address:</strong> <input v-model="order.address" /></p>
+          <p><strong>City:</strong> <input v-model="order.city" /></p>
+          <p>
+            <strong>State:</strong>
+            <select v-model="order.state">
+              <option disabled value="">State</option>
+              <option v-for="state in states" v-bind:value="state">
+                {{ state }}
+              </option>
+            </select>
+          </p>
+          <p><strong>Zip/Postal Code:</strong> <input v-model="order.zip" /></p>
+          <p>
+            <input
+              type="checkbox"
+              id="gift"
+              value="true"
+              v-model="order.gift"
+              v-bind:true-value="order.sendgift"
+              v-bind:false-value="order.dontsendgift" />
+            <label for="gift">Send as Gift</label>
+          </p>
+          <p>
+            <input type="radio" id="home" value="home" v-model="order.method" />
+            <label for="home">Home Delivery</label>
+          </p>
+          <p>
+            <input
+              type="radio"
+              id="buisness"
+              value="business"
+              v-model="order.method" />
+            <label for="buisness">Business Delivery</label>
+          </p>
+
+          <h3>Order Information</h3>
+          <p>First Name: {{ order.firstName }}</p>
+          <p>Last Name: {{ order.lastName }}</p>
+          <p>Address: {{ order.address }}</p>
+          <p>City: {{ order.city }}</p>
+          <p>State: {{ order.state }}</p>
+          <p>Zip/Postal Code: {{ order.zip }}</p>
+          <p>Items in cart: {{ cartItemCount }}</p>
+          <p>Delivery Method: {{ order.method }}</p>
+          <p>Gift Option: {{ order.gift }}</p>
+          <h3>Cart</h3>
+          <ul>
+            <li v-for="(entry, idx) in cartSummary" :key="idx">
+              {{ entry.title }} x {{ entry.qty }} - ${{ ((entry.qty * entry.price) / 100).toFixed(2) }}
+            </li>
+            <li v-if="cartSummary.length === 0">(Cart is empty)</li>
+          </ul>
+          <p><strong>Total: ${{ (cartTotal / 100).toFixed(2) }}</strong></p>
+          <button v-on:click="checkout">Confirm and Pay</button>
+          <button v-on:click="showCheckout">Back to Products</button>
+        </section>
       </main>
-      
-      <!-- Checkout Section -->
-      <section v-if="showCheckout">
-        <h2>Checkout</h2>
-        <p>
-          <strong>First Name:</strong>
-          <!-- This input field is bound to 'firstName' in the 'order' object -->
-          <input v-model.trim="order.firstName"/>
-        </p>
-        <p>
-          <strong>Last Name:</strong>
-          <!-- This input field is bound to 'lastName' in the 'order' object -->
-          <input v-model.trim="order.lastName"/>
-        </p>
-        <p>
-          <strong>Address:</strong> <input v-model="order.address"/>
-        </p>
-        <p>
-          <strong>City:</strong> <input v-model="order.city"/>
-        </p>
-        <p>
-          <strong>State:</strong>
-          <select v-model="order.state">
-            <option disabled value="">State</option>
-            <option v-for="(state, key) in states"
-            v-bind:value="state">
-            {{key}}
-            </option>
-          </select>
-        </p>
-        <p>
-          <strong>Zip/Postal Code:</strong> <input v-model.number="order.zip"/>
-        </p>
-        <p><input type="checkbox" id="gift" value="true"
-        v-model="order.gift"
-        v-bind:true-value="order.sendGift"
-        v-bind:false-value="order.dontSendGift">
-        <label for="gift">Ship As Gift?</label></p>
-        <p><input type="radio" id="home" value="Home" v-model="order.method">
-        <label for="home">Home</label>
-        <input type="radio" id="business" value="Business" v-model="order.method">
-        <label for="business">Business</label></p>
-        
-        <button v-on:click="submitForm">Place Order</button>
-        
-        <h2>Order Information</h2>
-        <p>First Name: {{order.firstName}}</p>
-        <p>Last Name: {{order.lastName}}</p>
-        <p>Address: {{order.address}}</p>
-        <p>City: {{order.city}}</p>
-        <p>State: {{order.state}}</p>
-        <p>Zip/Postal Code: {{order.zip}}</p>
-        <p>Ship As Gift: {{order.gift}}</p>
-        <p>Shipping Method: {{order.method}}</p>
-      </section>
     </div>
 
     <script type="text/javascript">
       var webstore = new Vue({
-        el: "#app", // <=== Don't forget this comma
+        el: "#app",
         data: {
           sitename: "Vue.js Pet Depot",
-          product: {
-            id: 1001,
-            title: "Cat Food, 25lb bag",
-            description: "A 25 pound bag of irresistible, organic goodness for your cat.",
-            price: 2000,
-            image: "images/images.jpg",
-          },
-          cart: [], // array to store items in shopping cart
+          showProduct: true,
+          products: products, // from external products.js file
           order: {
-            firstName: '',
-            lastName: '',
-            address: '',
-            city: '',
-            state: '',
-            zip: '',
-            method: 'Home',
-            gift: false,
-            sendGift: 'Send as a gift',
-            dontSendGift: 'Do not send as a gift'
+            firstName: "",
+            lastName: "",
+            address: "",
+            city: "",
+            state: "",
+            zip: "",
+            method: "home",
+            sendgift: "send as gift",
+            dontsendgift: "dont send as gift",
           },
-          showCheckout: false, // controls whether checkout section is visible
-          states: {
-            AL: 'Alabama',
-            AR: 'Arizona',
-            CA: 'California',
-            NV: 'Nevada'
-          }
-        },
-        computed: { // the Computed Property object
-          cartItemCount: function() { // the property name
-            // its value is calculated when it is called
-            return this.cart.length || "";
-          }
+          states: ["Alabama", "Alaska", "Arizona", "California", "Nevada"],
+          cart: [], // array to store product ids added to shopping cart
         },
         methods: {
-          addToCart: function () {
-            this.cart.push(this.product.id);
+          addToCart: function (productId) {
+            var prod = this.products.find(function (p) {
+              return p.id === productId;
+            });
+            if (!prod) return;
+            // count how many of this product are already in cart
+            var countInCart = this.cart.filter(function (id) {
+              return id === productId;
+            }).length;
+            if (countInCart >= prod.availableInventory) {
+              alert('Cannot add more of "' + prod.title + '": not enough inventory.');
+              return;
+            }
+            this.cart.push(productId);
           },
-          showCheckoutForm: function () {
-            this.showCheckout = true;
+          getRemainingInventory: function(productId) {
+            var prod = this.products.find(function (p) {
+              return p.id === productId;
+            });
+            if (!prod) return 0;
+            var countInCart = this.cart.filter(function (id) {
+              return id === productId;
+            }).length;
+            return Math.max(0, prod.availableInventory - countInCart);
           },
-          submitForm: function () {
-            alert('Order submitted!');
-          }
-        }
+          checkout: function () {
+            if (this.cart.length === 0) {
+              alert("Your cart is empty. Add items before checking out.");
+              return;
+            }
+            // Build a map of productId -> qty to decrement inventories
+            var qtyMap = {};
+            this.cart.forEach(function (id) {
+              qtyMap[id] = (qtyMap[id] || 0) + 1;
+            });
+            // Decrement product inventories
+            for (var id in qtyMap) {
+              var p = this.products.find(function (x) {
+                return x.id == id;
+              });
+              if (p) {
+                p.availableInventory = Math.max(0, p.availableInventory - qtyMap[id]);
+              }
+            }
+            alert('Checking out ' + this.cart.length + ' item(s).');
+            this.cart = [];
+          },
+          showCheckout: function () {
+            this.showProduct = this.showProduct ? false : true;
+          },
+        },
+        computed: {
+          cartItemCount: function () {
+            return this.cart.length;
+          },
+          // aggregated cart: array of {id, qty, title, price}
+          cartSummary: function () {
+            var summaryMap = {};
+            this.cart.forEach(function (id) {
+              summaryMap[id] = (summaryMap[id] || 0) + 1;
+            });
+            var arr = [];
+            for (var id in summaryMap) {
+              var p = this.products.find(function (x) {
+                return x.id == id;
+              });
+              arr.push({ 
+                id: id, 
+                qty: summaryMap[id], 
+                title: p ? p.title : 'Product ' + id,
+                price: p ? p.price : 0
+              });
+            }
+            return arr;
+          },
+          cartTotal: function() {
+            var total = 0;
+            this.cartSummary.forEach(function(entry) {
+              total += entry.qty * entry.price;
+            });
+            return total;
+          },
+          canAddProduct: function () {
+            // this is a convenience used by button disabled binding; returns a function when used in template
+            var self = this;
+            return function (productId) {
+              var prod = self.products.find(function (p) {
+                return p.id === productId;
+              });
+              if (!prod) return false;
+              var countInCart = self.cart.filter(function (id) {
+                return id === productId;
+              }).length;
+              return countInCart < prod.availableInventory;
+            };
+          },
+          remainingInventory: function () {
+            return 0; // kept for compatibility but not used per-product
+          },
+          itemsLeft() {
+            return 0;
+          },
+        },
       });
     </script>
   </body>

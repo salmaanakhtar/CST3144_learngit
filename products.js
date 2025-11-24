@@ -1,0 +1,48 @@
+// Products data for Vue.js Pet Depot
+var products = [
+  {
+    id: 1001,
+    title: "Cat Food, 25lb bag",
+    description: "A 25 pound bag of irresistible, organic goodness for your cat.",
+    price: 2000,
+    image: "images/images.jpg",
+    availableInventory: 10,
+    rating: 3,
+  },
+  {
+    id: 1002,
+    title: "Dog Kibble, 15lb bag",
+    description: "Nutritious kibble for happy, healthy dogs.",
+    price: 1800,
+    image: "images/images.jpg",
+    availableInventory: 8,
+    rating: 4,
+  },
+  {
+    id: 1003,
+    title: "Bird Seed Mix, 5lb",
+    description: "A premium seed mix for all small birds.",
+    price: 800,
+    image: "images/images.jpg",
+    availableInventory: 20,
+    rating: 4,
+  },
+  {
+    id: 1004,
+    title: "Fish Flakes, 200g",
+    description: "High-protein flakes to keep aquarium fish vibrant.",
+    price: 500,
+    image: "images/images.jpg",
+    availableInventory: 15,
+    rating: 5,
+  },
+  {
+    id: 1005,
+    title: "Rabbit Pellets, 10lb",
+    description: "Balanced pellets for small mammals like rabbits and guinea pigs.",
+    price: 1200,
+    image: "images/images.jpg",
+    availableInventory: 5,
+    rating: 3,
+  },
+];
